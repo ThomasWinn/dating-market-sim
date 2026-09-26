@@ -1,0 +1,23 @@
+[project]
+name = "dating-market-sim"
+version = "0.1.0"
+description = "A toy dating-app market simulator for poking at ranking (Elo, stable matching, learned rankers) and ghosting."
+readme = "README.md"
+authors = [
+    { name = "Thomas Nguyen", email = "tpnguyen1999@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.9.5,<0.10.0"]
+build-backend = "uv_build"
+
+[tool.ruff]
+line-length = 100
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.16.9",
+]
