@@ -157,3 +157,24 @@ it" is a good story about checking your assumptions with a measurement.
 **Speed:** `build_world` takes 0.07 s at 500 per side and 1.1 s at 2,000.
 
 **Look at:** `scores` and `calibrated_thresholds` in `sim/preferences.py`.
+
+---
+
+## Step 3: Metric helpers
+
+**What:** `gini` and `by_decile` in `sim/metrics.py`, with hand-checkable tests in
+`tests/test_metrics.py`. The full per-run summary (matches, zero-match %, dead likes, and so on)
+comes in step 4, because it needs the simulator's output.
+
+**Gini, in one line:** sort the values, then weight each by its rank position:
+`Σ (2i − n − 1)·x_i / (n · Σx)`. Two checks worth remembering (both are tests):
+- If everyone has the same amount, Gini is 0.
+- If one person has everything, Gini is (n − 1)/n, which approaches 1 as n grows.
+
+For dating markets, Gini of *likes received* is the headline inequality number people quote.
+Gini of *matches* is the one that matters to users.
+
+**by_decile:** sort people by a key (here, hidden appeal `u`), split them into ten equal
+groups, and average something per group. This is the "who gets left behind" chart.
+
+**Look at:** `tests/test_metrics.py`. Each test is a tiny worked example.
