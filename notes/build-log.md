@@ -541,10 +541,15 @@ algorithm's guarantee is the thing the business needs.
 
 ## Step 10: README
 
-**What:** the README now has a Phase 1 section with what the sim is, how to run it, five
-charts from the 2,000/side runs, three findings drawn from the measured numbers, and
-limitations. The three items Phase 1 covers are ticked in "Things I want to try", and the
-status line points to this log.
+**What:** at first I added a Phase 1 section to the old README. You pointed out that the rest
+of it still came from the Sep 26 brainstorm (a ghosting question and a to-try checklist),
+which the current plan, `dating-market-simulator.md`, no longer covers. So I rewrote it from
+scratch around that plan:
+- the core idea and the two halves
+- the four-phase roadmap with status
+- how the market and the rankers work
+- Phase 1 results with five charts, the three findings, and limitations
+- how to run it, and the repo layout
 
 **The findings are my draft.** Rewrite them in your own words. Explaining these three
 results out loud, with the numbers, is the interview-ready part of Phase 1.
@@ -553,7 +558,7 @@ results out loud, with the numbers, is the interview-ready part of Phase 1.
 
 ## Morning handoff
 
-**Done:** every step in the plan (0–10), including the Gale-Shapley stretch goal. There are 12
+**Done:** every step in the plan (0–10), including the Gale-Shapley stretch goal. There are 14
 commits on top of your skeleton (`git log --oneline`). **91 tests pass** in about 2.4 s, and
 `ruff check` and `ruff format --check` are clean. The working tree is clean.
 
