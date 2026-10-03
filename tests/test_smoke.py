@@ -1,5 +1,7 @@
-import dating_market_sim
+import rankers
+import sim
 
 
-def test_package_imports():
-    assert dating_market_sim.__version__ == "0.1.0"
+def test_packages_import():
+    assert sim.__name__ == "sim"
+    assert rankers.__name__ == "rankers"

@@ -7,11 +7,19 @@ authors = [
     { name = "Thomas Nguyen", email = "tpnguyen1999@gmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "matplotlib>=3.11.2",
+    "numpy>=2.5.3",
+    "pandas>=3.0.6",
+]
 
 [build-system]
 requires = ["uv_build>=0.9.5,<0.10.0"]
 build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+module-name = ["sim", "rankers"]
 
 [tool.ruff]
 line-length = 100
