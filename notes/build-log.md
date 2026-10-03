@@ -77,3 +77,83 @@ placeholder numbers, not from a bug. Calibration might change it, but it's worth
 reading the charts.
 
 **Look at:** `make_side` in `sim/population.py`.
+
+---
+
+## Step 2: True preferences (P, Q) and the World ⚠️ includes a weight change, please read
+
+**What:** `sim/preferences.py` builds `P[a, b]` (chance A likes B) and `Q[b, a]` (chance B
+likes A) once per world. `World` bundles the people, P, Q, and the pre-drawn decisions. Tests:
+`tests/test_preferences.py`.
+
+### Ideas worth knowing
+1. **Broadcasting instead of loops.** `taste` is an (n_viewers × n_targets) matrix built by
+   looping over the 5 traits only. For example, `viewers.ideals[:, j, None] - targets.traits[None, :, k]`
+   is (n, 1) minus (1, n), which numpy broadcasts to (n, n). That's every viewer–target pair
+   in one vectorized line.
+2. **Why standardize before mixing with w.** `score = w·z(u) + (1−w)·z_row(taste)`. If you
+   mixed raw values, whichever part had the bigger spread would dominate whatever w was. After
+   z-scoring, both parts have SD 1, so w = 0.6 really means "60% appeal".
+3. **Threshold calibration (choice #2 in the plan).** Your doc's quantile threshold gives:
+
+   | | target like-rate | quantile cut, realized |
+   |---|---|---|
+   | A | 0.406 | 0.418 |
+   | B | 0.103 | **0.145** (+40%) |
+
+   The reason: the sigmoid gives people *just below* the cut a real chance too, and a picky
+   person has many more people just below the cut than above it. `calibrated_thresholds`
+   bisects every row at once (40 halvings) until mean(P row) equals the target exactly.
+   `test_quantile_threshold_overshoots_low_like_rates` keeps the "before" as a documented fact.
+4. **Pre-drawn decisions (choice #1).** `DA = U < P` is drawn once, so A's answer about B is
+   fixed for the whole run. Two payoffs: repeat looks are consistent, and every ranker faces
+   the same coin flips (*common random numbers*, a standard variance-reduction trick in
+   simulation and A/B-test analysis).
+5. **Named RNG streams.** `rng_for(seed, "chemistry")` and friends: each random part has its
+   own stream from `SeedSequence.spawn`. In the w sweep, the same seed gives the same people,
+   chemistry, and decision coin flips. Only w changes, so the curves isolate w's effect.
+
+### ⚠️ The sanity check failed at first, and I changed your fitness/ambition weights
+Your sanity check, "high w → likes concentrate heavily; low w → much flatter", **failed** with
+the plan's importances. Expected likes received:
+
+| w (side A) | Gini A→B | Gini B→A | likes track... |
+|---|---|---|---|
+| 0.1 (plan weights) | 0.38 | 0.70 | fitness (corr 0.88) |
+| 0.9 (plan weights) | 0.41 | 0.72 | u (corr 0.96) |
+
+w only changed *who* got the likes, not how unequal the split was.
+
+**Why:** I measured each trait term's spread within a viewer's row. Fitness alone was 63% of
+taste variance, and fitness plus ambition together 78%. Two things combine:
+- Everyone ranks more-is-better traits the same way, so they are universal, just like `u`.
+- The ideal-point terms barely spread. Ideals cluster toward the middle (ρ = 0.5), and
+  closeness `1 − |ideal − trait|` has a squashed range, giving a variance of about 0.04 each.
+  Fitness, at importance 2.0, has a variance of 0.34.
+
+So "type" was mostly a second universal score. Your doc predicted exactly this: *"If charts
+show extreme concentration even at low w, check the fitness weights first."*
+
+**What I did:** I kept your pattern (fitness weighted more than ambition; B a bit lower on
+fitness and higher on ambition) and scaled the two more-is-better weights down 4×. A:
+fitness 2.0 → 0.5, ambition 1.0 → 0.25. B: 1.8 → 0.45, 1.3 → 0.325. The universal share drops
+to ~18%. The original values are in a comment in `sim/config.py`, so reverting is a two-line
+change. The sweep now behaves:
+
+| w (side A) | 0.1 | 0.3 | 0.5 | 0.7 | 0.9 |
+|---|---|---|---|---|---|
+| Gini likes received A→B | 0.27 | 0.29 | 0.33 | 0.38 | 0.42 |
+| Gini likes received B→A | 0.49 | 0.51 | 0.57 | 0.65 | 0.71 |
+
+**For you to decide:** the honest reading is that in your model, "fitness is high importance"
+and "w controls how universal attraction is" can't both hold. Universality really comes from
+w *plus* any trait everyone agrees on. Other fixes would be to standardize each trait term
+(so importance means influence), or to treat fitness as part of appeal rather than type. I
+went with the smallest change. Two new tests guard it: `test_taste_is_mostly_personal`
+(universal share < 30%) and `test_high_w_concentrates_likes_on_high_u` (Gini rises ≥ 0.1).
+**Interview angle:** "the knob I thought controlled universality wasn't the only source of
+it" is a good story about checking your assumptions with a measurement.
+
+**Speed:** `build_world` takes 0.07 s at 500 per side and 1.1 s at 2,000.
+
+**Look at:** `scores` and `calibrated_thresholds` in `sim/preferences.py`.

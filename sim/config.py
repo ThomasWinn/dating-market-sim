@@ -25,9 +25,14 @@ class SideConfig:
 
 
 # Side A likes more often and weights looks more; side B is pickier and weights ambition more.
-# Importance scale: moderate = 1.0, high = 2.0.
-SIDE_A = SideConfig(w_mean=0.6, like_rate_beta=(2, 3), importance=(1.0, 1.0, 1.0, 2.0, 1.0))
-SIDE_B = SideConfig(w_mean=0.5, like_rate_beta=(4, 36), importance=(1.0, 1.0, 1.0, 1.8, 1.3))
+#
+# The plan's importances were (1, 1, 1, 2, 1) for A and (1, 1, 1, 1.8, 1.3) for B. Those made
+# 78% of each person's taste variance come from fitness and ambition, which everyone ranks the
+# same way, so "type" acted as a second universal score and the w sweep came out flat (Gini of
+# likes received 0.38 at w = 0.1 vs 0.41 at w = 0.9). The two more-is-better weights below
+# keep the same pattern, scaled down 4x, which brings that share to about 18%.
+SIDE_A = SideConfig(w_mean=0.6, like_rate_beta=(2, 3), importance=(1.0, 1.0, 1.0, 0.5, 0.25))
+SIDE_B = SideConfig(w_mean=0.5, like_rate_beta=(4, 36), importance=(1.0, 1.0, 1.0, 0.45, 0.325))
 
 
 @dataclass(frozen=True)
