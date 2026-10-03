@@ -483,3 +483,56 @@ newest-first and stale likes block rediscovery (step 7).
   which is worth remembering when reading any app's "like-rate" dashboard. Classroom mode
   stays on target (0.397 / 0.103) because almost everyone reaches the end of their 10
   profiles.
+
+---
+
+## Step 9 (stretch): Gale-Shapley as a daily top pick (`experiments/01d_top_pick.py`)
+
+**What:**
+- `rankers/gale_shapley.py`: `gale_shapley()` is the classic algorithm in about 25 lines,
+  and `GaleShapleyRanker` uses it as a once-a-day top pick.
+- `MarketState` now carries both sides' morning eligibility. A stable matching needs to know
+  who is still available on *both* sides.
+- `experiments/01d_top_pick.py`: everyone gets exactly one profile a day for 30 days. GS vs
+  the reciprocal oracle's top-1 vs random's top-1, across w. 81 runs in 4 s.
+
+### The algorithm (read `gale_shapley()`, it's short)
+1. Every free proposer (side A) proposes to their best receiver they haven't tried yet.
+2. Each receiver (side B) holds the best offer so far and rejects the rest. A dumped holder
+   goes back to proposing.
+3. Repeat until nobody has anyone left to try.
+
+Two properties, both brute-force tested in `tests/test_gale_shapley.py`:
+- **Stable:** no pair would both rather be with each other. Checked on 20 random markets with
+  random "not allowed" pairs.
+- **Proposer-optimal:** every proposer gets the best partner they could have in *any* stable
+  matching. Checked by listing all 120 matchings of 5×5 markets. The flip side is that
+  receivers get their *worst* stable partner, so which side proposes is a real policy choice.
+
+### Result: stability isn't the same as matches
+At w = 0.6, 500/side, seed 0, one pick a day for 30 days:
+
+| | distinct pairs shown | mean match chance per pair | Σ P·Q | actual matches |
+|---|---|---|---|---|
+| random | 29,298 | 0.030 | 865 | 877 |
+| Gale-Shapley | **14,944** | 0.121 | 1,809 | 1,819 |
+| reciprocal top-1 | 26,625 | **0.200** | 5,333 | 5,126 |
+
+Gale-Shapley is about 2× random but about 3× *below* the reciprocal oracle's top-1. Two
+reasons, both measured:
+1. **Half the pairs.** A stable pair is each other's pick, so 500 people per side see only
+   500 distinct pairs a day instead of up to 1,000. It's the same duplication that hurt Elo
+   in step 5, at 100%.
+2. **Rank order isn't odds.** Stability only asks "would they both rather swap?" It never
+   maximizes P·Q. Mid-ranked people get stably paired with each other even when neither
+   would like the other much.
+
+What GS does well: **zero dead likes** (each person gets exactly one incoming pick) and the
+most equal matches at low w (Gini 0.42 vs 0.47). Its advantage on fairness and congestion
+disappears as attraction gets more universal (crossover near w = 0.7).
+
+**Interview angle:** "stable matching was the textbook answer, but the objective is matches,
+and stability optimizes something else." That's a good example of checking whether an
+algorithm's guarantee is the thing the business needs.
+
+**Look at:** `gale_shapley()` in `rankers/gale_shapley.py`, then `results/n500/01d_top_pick.png`.

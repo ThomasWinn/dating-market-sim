@@ -14,6 +14,7 @@ class MarketState:
     world: World  # the oracles read true P and Q from here; other rankers must not
     day: int
     likes_received: dict[str, np.ndarray]  # browse likes received so far, per side
+    eligible: dict[str, np.ndarray] | None = None  # who each side may be shown this morning
 
 
 @dataclass

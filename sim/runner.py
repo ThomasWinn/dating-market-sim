@@ -13,15 +13,26 @@ from rankers.baselines import (
     ReciprocalOracle,
 )
 from rankers.elo import EloRanker
+from rankers.gale_shapley import GaleShapleyRanker
 from sim.config import Config
 from sim.market import simulate
 from sim.metrics import summarize
 from sim.preferences import build_world
 
+BASELINES = [
+    r.name for r in (RandomRanker, PopularityRanker, EloRanker, OneSidedOracle, ReciprocalOracle)
+]
 RANKERS = {
-    r.name: r for r in (RandomRanker, PopularityRanker, EloRanker, OneSidedOracle, ReciprocalOracle)
+    r.name: r
+    for r in (
+        RandomRanker,
+        PopularityRanker,
+        EloRanker,
+        OneSidedOracle,
+        ReciprocalOracle,
+        GaleShapleyRanker,
+    )
 }
-BASELINES = list(RANKERS)
 
 
 def _run(task: tuple[dict, Config, int, list[str]]) -> list[dict]:

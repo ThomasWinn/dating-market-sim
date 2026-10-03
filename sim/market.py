@@ -175,13 +175,15 @@ class Market:
         return swipes
 
     def browse(self, day: int) -> list[Swipes]:
-        state = MarketState(self.world, day, self.likes_received)
+        eligible = {}
+        for s in SIDES:
+            eligible[s] = ~self.seen[s]
+            eligible[s][self.inbox[s].recipient, self.inbox[s].sender] = False
+        state = MarketState(self.world, day, self.likes_received, eligible)
         swipes, new_likes = [], {}
         for s in SIDES:
             n, L = self.people[s].n, self.cfg.list_len
-            eligible = ~self.seen[s]
-            eligible[self.inbox[s].recipient, self.inbox[s].sender] = False
-            lists = self.ranker.lists(s, state, eligible, L)
+            lists = self.ranker.lists(s, state, eligible[s], L)
 
             valid = lists >= 0
             rows = np.arange(n)[:, None]
