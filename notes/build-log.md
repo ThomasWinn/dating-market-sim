@@ -251,3 +251,66 @@ which confirms the calibration end to end. Likes *to B* die ~5× more often than
 the picky side is also the side whose inbox overflows.
 
 **Look at:** `Market.review` and `Market.browse`, then `Ranker.lists`.
+
+---
+
+## Step 5: Popularity, Elo, and the two oracles
+
+**What:**
+- `rankers/baselines.py`: `PopularityRanker`, `OneSidedOracle`, `ReciprocalOracle`.
+- `rankers/elo.py`: `EloRanker`.
+- `sim/preferences.py`: the side constants (`SIDES`, `OTHER`) moved here, next to `World`, so
+  rankers can use them without a circular import. Also adds `World.probs(side)`.
+- Tests: `tests/test_rankers.py`, 12 tests, including a hand-computed Elo update.
+
+### The rankers in one line each
+- **Popularity:** likes received + U[0, 1) noise. Counts are integers, so the noise only breaks
+  ties, and it's drawn fresh per viewer so day 1 isn't the same list for everyone. Every 10th
+  slot is exploration.
+- **Elo:** each swipe is a game that the *person swiped on* wins (a like) or loses (a pass),
+  against the swiper's rating. Hand-checked in a test: a 1,600 swiper liking a 1,400 target
+  gives +24.3, and a pass gives −7.7. A day's swipes are batched from the morning ratings
+  (`np.add.at` handles repeated targets). The ranking shows people at a similar
+  **percentile within their own side**, because raw ratings aren't comparable across sides.
+- **One-sided oracle:** P (how much I'd like them).
+- **Reciprocal oracle:** P ∘ Qᵀ (the true match chance).
+
+### Results (classroom, 500/side, default w, mean of 3 seeds)
+| ranker | matches | zero-match % | Gini matches | dead likes to A / B | like-rate A / B |
+|---|---|---|---|---|---|
+| popularity | 2,052 | 36.2 | 0.73 | **81% / 86%** | 0.66 / 0.27 |
+| elo | 2,554 | 21.2 | 0.61 | 0.2% / 4.4% | 0.36 / 0.07 |
+| random | 3,072 | 14.8 | 0.56 | 1.3% / 6.1% | 0.40 / 0.10 |
+| one-sided oracle | 5,422 | 13.0 | 0.58 | 35% / 56% | 0.81 / 0.36 |
+| reciprocal oracle | **6,702** | **9.2** | 0.56 | 19% / 18% | 0.58 / 0.28 |
+
+Your sanity checks pass: reciprocal ≥ everything, and reciprocal > one-sided.
+
+### Three things worth understanding
+1. **Popularity is *worse* than random.** It herds everyone toward the same few people, and
+   81–86% of likes then die unread in their overflowing inboxes. Likes are high (0.66), but
+   matches are low. This is the congestion story the MODE paper (Phase 2) is about, and here
+   it shows up in a heuristic real apps have used.
+2. **The one-sided oracle has the same flaw, milder.** It shows you who *you* like most,
+   which means the universally appealing people, so their inboxes clog (35% / 56% dead).
+   Adding "will they like me back" (reciprocal) roughly halves the dead likes and adds 24%
+   matches. That's the whole case for reciprocal recommendation in one row.
+3. **Elo is below random, and it isn't a bug.** I checked, because by the rearrangement
+   inequality, pairing similar-appeal people *should* raise expected matches:
+   - Elo's ratings do track hidden appeal (corr 0.71 on A, 0.87 on B).
+   - The pairs it shows *do* have a higher match chance (mean P·Q 0.0344 vs 0.0293).
+   - **But percentile neighbourhoods are symmetric.** If A sits near B's percentile, then A
+     sees B *and* B sees A. With decisions drawn once, the second look adds nothing. Only 65%
+     of Elo's views are distinct pairs, vs 91% for random (38,717 pairs seen from both
+     sides). 17% better pairs × 29% fewer distinct pairs = fewer matches.
+
+   **A useful identity falls out of this:** matches ≈ Σ P·Q over distinct pairs evaluated
+   (random: 3,031 predicted vs 2,968 actual; Elo: 2,521 vs 2,480). The reciprocal oracle
+   loses ~8% to congestion (7,086 → 6,509), and that gap is exactly what a market-level ranker
+   like MODE tries to win back.
+
+**Interview angle for #3:** "the per-impression metric went up, but the system metric went
+down, because impressions weren't independent." That's the offline-vs-online gap in
+miniature.
+
+**Look at:** `rankers/elo.py` (short), then `ReciprocalOracle` in `rankers/baselines.py`.

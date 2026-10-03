@@ -82,6 +82,11 @@ def like_probs(viewers: Side, targets: Side, chemistry: np.ndarray, temp: float)
     return _sigmoid((s - thr[:, None]) / temp)
 
 
+SIDES = ("a", "b")
+OTHER = {"a": "b", "b": "a"}
+SIDE_ID = {"a": 0, "b": 1}
+
+
 @dataclass(frozen=True)
 class World:
     """The people and their true preferences. Built once, then shared by every ranker."""
@@ -97,6 +102,10 @@ class World:
     # coin flips, so differences between rankers are about ranking, not luck.
     DA: np.ndarray  # (n_a, n_b) bool: A would like B
     DB: np.ndarray  # (n_b, n_a) bool: B would like A
+
+    def probs(self, side: str) -> np.ndarray:
+        """Like chances oriented [viewer on `side`, candidate on the other side]."""
+        return self.P if side == "a" else self.Q
 
 
 def build_world(cfg: Config, seed: int) -> World:

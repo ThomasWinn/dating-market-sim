@@ -16,11 +16,7 @@ import numpy as np
 import pandas as pd
 
 from rankers.base import MarketState, Ranker, Swipes
-from sim.preferences import World, rng_for
-
-SIDES = ("a", "b")
-OTHER = {"a": "b", "b": "a"}
-SIDE_ID = {"a": 0, "b": 1}
+from sim.preferences import OTHER, SIDE_ID, SIDES, World, rng_for
 
 
 @dataclass
@@ -110,7 +106,6 @@ class Market:
         self.world, self.cfg, self.ranker = world, world.cfg, ranker
         n = self.cfg.n_per_side
         self.people = {"a": world.a, "b": world.b}
-        self.probs = {"a": world.P, "b": world.Q}
         self.decides = {"a": world.DA, "b": world.DB}
         self.seen = {s: np.zeros((n, n), bool) for s in SIDES}  # [viewer, other side]
         self.matched = np.zeros((n, n), bool)  # [a, b]
@@ -157,7 +152,7 @@ class Market:
                 continue
 
             if self.cfg.inbox_order == "best":
-                priority = -self.probs[s][box.recipient, box.sender]
+                priority = -self.world.probs(s)[box.recipient, box.sender]
             else:
                 priority = -box.day_sent
             # Sort by recipient, then priority (ties broken at random); then each recipient
