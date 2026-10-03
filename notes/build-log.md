@@ -314,3 +314,55 @@ down, because impressions weren't independent." That's the offline-vs-online gap
 miniature.
 
 **Look at:** `rankers/elo.py` (short), then `ReciprocalOracle` in `rankers/baselines.py`.
+
+---
+
+## Step 6: The classroom sweep (`experiments/01_baselines_sweep.py`)
+
+**What:**
+- `sim/runner.py`: a parallel sweep runner. Each (config, seed) world is built once, every
+  ranker runs on it, and `ProcessPoolExecutor` spreads the work over 14 cores.
+- `sim/plots.py`: shared chart style. Colors follow the ranker, in a fixed palette order
+  checked with a colorblind-safety validator.
+- `experiments/01_baselines_sweep.py`: 5 rankers × 9 w values × 3 seeds = 135 runs.
+  **It takes 2 seconds at 500 per side.**
+
+Run it:
+```bash
+uv run python experiments/01_baselines_sweep.py --mode classroom          # 500/side
+uv run python experiments/01_baselines_sweep.py --mode classroom --n 2000 # final numbers
+```
+
+Outputs in `results/`, each with the CSV twin `01_classroom_sweep.csv`:
+`01_classroom_matches_vs_w.png`, `_gini_vs_w.png`, `_dead_likes_vs_w.png`,
+`_u_deciles.png`, `_oracles.png`.
+
+**A plan change:** I commit `results/` instead of gitignoring it. The README and the HTML
+report both show these charts, and they're small. They regenerate exactly, since seeds are
+fixed.
+
+### Self-check against your sanity list (all pass)
+| check | result |
+|---|---|
+| High w concentrates likes, low w is flatter | Gini of likes received by B (random): 0.29 at w = 0.1 → 0.42 at 0.9. Gini of matches: 0.48 → 0.66 |
+| Reciprocal oracle ≥ random, popularity, Elo | yes, at every w |
+| Reciprocal > one-sided oracle | yes, at every w (e.g. 6,702 vs 5,422 at w = 0.6) |
+| Realized like-rates ≈ targets | 0.395 / 0.100 vs 0.406 / 0.103 (step 4) |
+| Exposure ≤ 30% | max 29.9% (one-sided oracle, side B, w = 0.1) |
+
+### What the charts say
+- **Matches fall as attraction gets more universal, for every ranker.** At w = 0.1 the
+  reciprocal oracle makes 11.0k matches; at 0.9 it makes 4.9k. When everyone wants the same
+  people, most likes go to people who won't like back.
+- **Popularity is the worst at every w:** about 80–86% of its likes die unread. It creates its
+  own concentration through a feedback loop (liked → shown more → liked more), so it's bad
+  even when tastes are personal (w = 0.1).
+- **"Who gets left behind" (w = 0.8):** on side A the bottom half of hidden appeal gets
+  almost nothing under *every* ranker. On side B under random, matches *peak at decile 8
+  and then fall*. The most attractive B's are also the pickiest (the −0.70 correlation from
+  step 1), so they like back less.
+- **One-sided vs. reciprocal:** at w = 0.9 the one-sided oracle lets 67% of likes die, vs 30%
+  for reciprocal, with 32.6% vs 24.8% of users at zero matches.
+
+**Look at:** `results/01_classroom_oracles.png` first. It's the one-picture argument for
+reciprocal recommendation.
