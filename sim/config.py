@@ -68,9 +68,10 @@ class Config:
     elo_k: float = 32.0
 
 
-# Exposure targets: the share of the other side an average user sees over a whole run.
-# Days are derived from these so results stay comparable across market sizes.
-CLASSROOM_EXPOSURE = 0.24
+# Exposure targets: the share of the other side an average user sees while browsing over a
+# whole run. Days are derived from these so results stay comparable across market sizes.
+# Inbox reviews add more on top (about 7 points for side B), so the classroom target leaves room.
+CLASSROOM_EXPOSURE = 0.22
 HINGE_EXPOSURE = 0.30
 HINGE_VIEWS_PER_DAY = 20  # ~1 / quit_prob
 HINGE_LIST_LEN = 50

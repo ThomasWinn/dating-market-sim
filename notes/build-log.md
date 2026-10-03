@@ -178,3 +178,76 @@ Gini of *matches* is the one that matters to users.
 groups, and average something per group. This is the "who gets left behind" chart.
 
 **Look at:** `tests/test_metrics.py`. Each test is a tiny worked example.
+
+---
+
+## Step 4: The market loop (classroom mode) and the random ranker
+
+**What:**
+- `sim/market.py`: the daily loop and the event log.
+- `rankers/base.py`: shared list-building code that every ranker uses.
+- `rankers/baselines.py`: `RandomRanker`.
+- `summarize()` in `sim/metrics.py`: one row of metrics per run.
+- Tests: `tests/test_market.py`, 14 invariants.
+
+### How a day works (`Market.run`)
+1. **`review(day)`:** each side's inbox is three flat arrays (`recipient`, `sender`,
+   `day_sent`), one entry per pending like. The vectorized "top-k per group" trick:
+   ```python
+   order = np.lexsort((random_tiebreak, priority, recipient))  # last key sorts first
+   rec = recipient[order]
+   rank_in_group = np.arange(len(rec)) - np.searchsorted(rec, rec)  # 0, 1, 2... per recipient
+   take = rank_in_group < attention[rec]
+   ```
+   `searchsorted(rec, rec)` returns where each recipient's group starts, so subtracting it
+   gives each like's rank within its recipient's queue. It's worth learning: "top-k within
+   each group without a Python loop" comes up everywhere in ranking code.
+2. **`browse(day)`:** eligible = not seen and not waiting in my inbox. The ranker turns that
+   into an ordered list. The swiping itself is also vectorized:
+   - `cumsum` of would-like along the list shows where the like cap is hit.
+   - `geometric(quit_prob)` gives each person's patience.
+   - Profiles viewed = min(cap stop, patience, list length). Classroom mode is the same code
+     with `quit_prob = 0` and `list_len = 10`, so Hinge-mode scrolling needs no second code
+     path.
+3. **`end_of_day`:** in classroom mode, unreviewed likes die. Then today's likes are delivered
+   for tomorrow.
+
+After the last day there is one review-only round, so the last day's likes get a fair chance.
+
+### Rankers share one list builder (`Ranker.lists`)
+A ranker only provides `scores(side, state)`, an (n_viewers × n_candidates) matrix. The base
+class does the rest:
+- masks ineligible candidates to −∞
+- picks the top k with `argpartition`, which is O(n) per row instead of a full sort
+- fills exploration slots if the ranker uses them
+- pushes −1 padding to the end
+
+Exploration slots are spread through the list (every 10th position) rather than tacked on
+the end, so a Hinge scroller who quits after ~20 profiles still reaches them.
+
+### Bookkeeping choices
+- **Every like is logged exactly once** in the inbox log: reviewed (with `day_reviewed`),
+  died (`day_reviewed = -1`), or superseded. A test checks inbox rows == browse likes.
+- **A "dead like"** = never reviewed *and* the pair never matched. If A and B like each other
+  on the same day and one like-back happens first, the other like is resolved, not dead.
+- **Morning state:** both sides' rankers see the same morning state, because new likes are
+  applied only after both sides have browsed. Without this, side A's swipes would leak into
+  side B's ranking on the same day.
+
+### I changed the classroom exposure target from 0.24 to 0.22 (11 days at 500, not 12)
+Reviewing someone's like in your inbox also counts as seeing them, so it also shrinks your
+pool. Side B gets a lot of incoming likes from the like-happy side A. At 12 days B saw 32% of
+side A, which is over your ~30% guideline. At 11 days: A 24%, B 29%, at both 500 and 2,000 per
+side (the exposure-derived days keep it steady). A new test enforces ≤ 30%.
+
+### Numbers (random ranker, classroom mode, seed 0)
+| n/side | days | runtime | matches | zero-match % | dead likes to A / to B | like-rate A / B |
+|---|---|---|---|---|---|---|
+| 500 | 12* | 0.07 s | 3,209 | 14.7% | 1.2% / 5.8% | 0.395 / 0.100 |
+| 2,000 | 48* | 3.9 s | 55,010 | 4.4% | 1.0% / 6.3% | 0.404 / 0.102 |
+
+\*Measured before the exposure change. The realized like-rates match targets (0.406 / 0.103),
+which confirms the calibration end to end. Likes *to B* die ~5× more often than likes *to A*:
+the picky side is also the side whose inbox overflows.
+
+**Look at:** `Market.review` and `Market.browse`, then `Ranker.lists`.

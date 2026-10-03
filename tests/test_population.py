@@ -62,6 +62,6 @@ def test_with_w_keeps_the_side_gap():
 
 
 def test_days_follow_exposure_targets():
-    assert classroom(500).days == 12
+    assert classroom(500).days == 11
     stages = hinge_stages(2000)
     assert {c.days for c in stages.values()} == {30}
