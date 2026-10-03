@@ -548,3 +548,60 @@ status line points to this log.
 
 **The findings are my draft.** Rewrite them in your own words. Explaining these three
 results out loud, with the numbers, is the interview-ready part of Phase 1.
+
+---
+
+## Morning handoff
+
+**Done:** every step in the plan (0–10), including the Gale-Shapley stretch goal. There are 12
+commits on top of your skeleton (`git log --oneline`). **91 tests pass** in about 2.4 s, and
+`ruff check` and `ruff format --check` are clean. The working tree is clean.
+
+**Runtimes on your M4 Max (14 worker processes):**
+
+| command | time |
+|---|---|
+| `uv run pytest` | 2.4 s |
+| `experiments/01_baselines_sweep.py` (both modes, 500/side, 270 runs) | 4 s |
+| `experiments/01_baselines_sweep.py --n 2000` (270 runs) | 1 min 41 s |
+| `experiments/01b_hinge_mode.py --n 2000` (60 runs) | 23 s |
+| `experiments/01c_scale_check.py` (90 runs) | 23 s |
+| `experiments/01d_top_pick.py` (81 runs) | 4 s |
+
+**Where I went beyond or against your plan:**
+1. ⚠️ **Fitness and ambition importances scaled down 4×** (step 2). With the plan's values, `w`
+   didn't control concentration, and your own sanity check failed. This is the one change
+   that most needs your OK. The original values are in a comment in `sim/config.py`.
+2. **Run length comes from an exposure target.** Inbox reviews also count as seeing someone,
+   so the browse targets are 0.22 (classroom: 11 days at 500, 44 at 2,000) and 0.27 (Hinge:
+   6 and 27). Everyone stays ≤ ~30%.
+3. **Like-rate thresholds are calibrated by bisection.** Your quantile cut overshoots side B
+   by 40%.
+4. **Decisions are drawn once per pair; chemistry is shared by both directions; Elo learns
+   from inbox reviews too.** The planned modeling choices, all explained in their steps.
+5. **`results/` is committed**, under `results/n500/` and `results/n2000/`.
+6. **I added `sim/runner.py`, `sim/plots.py`, and `experiments/01d_top_pick.py`**, plus the
+   `cap_hit_share` metric.
+
+**Nothing stopped the build.** Two sanity surprises came up and both were explained with
+measurements before I moved on: the flat w sweep (step 2, fixed) and Elo below random (step 5,
+a real effect).
+
+**Three headline findings** (also in the README):
+1. Reciprocal vs one-sided: about +25% matches and half the dead likes.
+2. Congestion beats compatibility: popularity is worse than random, and Hinge mechanics hit
+   the herding rankers hardest.
+3. Better per-impression odds can still lose, if neighbourhoods are symmetric (Elo, GS).
+   Matches ≈ Σ P·Q over distinct pairs evaluated.
+
+**Suggested reading order (about 45 minutes):**
+1. Step 2 here. Decide on the weight change.
+2. `results/n2000/01_classroom_oracles.png`, then step 5's table and its "three things".
+3. Step 7, with `results/n2000/01b_sides_by_stage.png` and `01b_outcomes_by_stage.png`.
+4. The code, in this order: `sim/preferences.py`, then `sim/market.py`, then `rankers/elo.py`
+   and `rankers/gale_shapley.py`.
+5. Rewrite the README's three findings in your own words.
+
+**Natural next step:** Phase 2, which reproduces MODE's Figure 1a. Step 7's carry-over result
+(a stale like blocking rediscovery) is a good thing to bring to the MODE paper's assumptions:
+MODE assumes nothing carries over.
