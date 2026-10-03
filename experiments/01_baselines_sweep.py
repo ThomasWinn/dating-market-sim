@@ -15,15 +15,15 @@ from sim.config import classroom, hinge, with_w
 from sim.plots import INK_2, figure, finish, series_lines
 from sim.runner import run_grid
 
-RESULTS = Path(__file__).resolve().parent.parent / "results"
+ROOT = Path(__file__).resolve().parent.parent / "results"
 W_VALUES = [round(0.1 * i, 1) for i in range(1, 10)]
 HIGH_W = 0.8
 MODES = {"classroom": classroom, "hinge": hinge}
 
 
-def charts(df, mode: str, n: int, seeds: int) -> None:
+def charts(df, mode: str, n: int, seeds: int, out: Path) -> None:
     sub = f"{mode.capitalize()} mode · {n:,} per side · mean of {seeds} seeds, band = min–max"
-    prefix = RESULTS / f"01_{mode}"
+    prefix = out / f"01_{mode}"
 
     fig, (ax,) = figure()
     series_lines(ax, df, "w", "matches")
@@ -103,12 +103,13 @@ def main() -> None:
         base = MODES[mode](args.n)
         jobs = [({"mode": mode, "w": w}, with_w(base, w)) for w in W_VALUES]
         df = run_grid(jobs, range(args.seeds), workers=args.workers)
-        RESULTS.mkdir(exist_ok=True)
-        df.to_csv(RESULTS / f"01_{mode}_sweep.csv", index=False)
-        charts(df, mode, args.n, args.seeds)
+        out = ROOT / f"n{args.n}"
+        out.mkdir(parents=True, exist_ok=True)
+        df.to_csv(out / f"01_{mode}_sweep.csv", index=False)
+        charts(df, mode, args.n, args.seeds, out)
         print(
             f"{mode}: {len(df)} runs, {base.days} days, {time.perf_counter() - start:.0f}s "
-            f"-> results/01_{mode}_*.png"
+            f"-> results/n{args.n}/01_{mode}_*.png"
         )
 
 

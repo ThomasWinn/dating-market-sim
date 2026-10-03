@@ -333,7 +333,7 @@ uv run python experiments/01_baselines_sweep.py --mode classroom          # 500/
 uv run python experiments/01_baselines_sweep.py --mode classroom --n 2000 # final numbers
 ```
 
-Outputs in `results/`, each with the CSV twin `01_classroom_sweep.csv`:
+Outputs in `results/`, each with the CSV twin `results/n500/01_classroom_sweep.csv`:
 `01_classroom_matches_vs_w.png`, `_gini_vs_w.png`, `_dead_likes_vs_w.png`,
 `_u_deciles.png`, `_oracles.png`.
 
@@ -364,7 +364,7 @@ fixed.
 - **One-sided vs. reciprocal:** at w = 0.9 the one-sided oracle lets 67% of likes die, vs 30%
   for reciprocal, with 32.6% vs 24.8% of users at zero matches.
 
-**Look at:** `results/01_classroom_oracles.png` first. It's the one-picture argument for
+**Look at:** `results/n500/01_classroom_oracles.png` first. It's the one-picture argument for
 reciprocal recommendation.
 
 ---
@@ -432,4 +432,54 @@ with the 560 lost matches. Here's the mechanism:
 don't flood and carry-over slightly helps (119 → 88 missed pairs). This is a congestion
 effect, and exactly the kind MODE reasons about.
 
-**Look at:** `results/01b_sides_by_stage.png`, then `results/01b_outcomes_by_stage.png`.
+**Look at:** `results/n500/01b_sides_by_stage.png`, then `results/n500/01b_outcomes_by_stage.png`.
+
+---
+
+## Step 8: Both modes from one command, final 2,000/side runs, scale check
+
+**What:**
+- `01_baselines_sweep.py` now runs **both modes by default**. That's your doc's "done when":
+  one command produces the baseline sweep charts in both modes.
+- Outputs go to `results/n<size>/`, so the 500/side development runs and the 2,000/side
+  final runs sit side by side. Earlier log entries now point at `results/n500/`.
+- `experiments/01c_scale_check.py` runs 500 / 1,000 / 2,000 per side in both modes.
+
+```bash
+uv run python experiments/01_baselines_sweep.py            # 500/side, both modes: 4 s
+uv run python experiments/01_baselines_sweep.py --n 2000   # final: 1 min 41 s (14 cores)
+uv run python experiments/01b_hinge_mode.py --n 2000       # 23 s
+uv run python experiments/01c_scale_check.py               # 23 s
+```
+
+### Scale check: the ranker order is identical at every size, in both modes
+| rank | 1 | 2 | 3 | 4 | 5 |
+|---|---|---|---|---|---|
+| all sizes, both modes | reciprocal | one-sided | random | Elo | popularity |
+
+Per-user-per-day rates are roughly flat across sizes (`results/01c_*_scale.png`), which
+confirms the exposure-based day count keeps sizes comparable. Gini of matches falls slightly
+as the market grows (0.53 → 0.50 for reciprocal in Hinge mode): with more days, there's more
+chance for everyone.
+
+### Final numbers (2,000/side, default w = 0.6, mean of 3 seeds)
+| | random | popularity | Elo | one-sided | reciprocal |
+|---|---|---|---|---|---|
+| classroom matches | 50,581 | 19,050 | 40,846 | 89,018 | **111,263** |
+| hinge matches | 45,393 | 21,727 | 38,669 | 52,030 | **72,010** |
+| classroom dead likes | 4.9% | **92.5%** | 6.0% | 48.8% | 18.3% |
+| hinge dead likes | 6.0% | 77.2% | 1.8% | 55.0% | 24.6% |
+
+**Hinge mode hurts the oracles most.** One-sided: −42%, reciprocal: −35%, random: −10%.
+The rankers that send everyone to the same people suffer most when inboxes are reviewed
+newest-first and stale likes block rediscovery (step 7).
+
+### Two details, reported as they are
+- **Exposure peaked at 30.3%** in one sweep config (side B, classroom). That's within your
+  "~25–30%" but 0.3 points over 30%. I didn't shave the day count again for it.
+- **Side A's realized like-rate in Hinge mode is 0.35, not 0.41.** That's not a calibration
+  bug. The heaviest likers hit the cap after a few profiles and stop viewing, so they make up
+  a smaller share of all views. *Per-view* metrics are biased toward whoever views the most,
+  which is worth remembering when reading any app's "like-rate" dashboard. Classroom mode
+  stays on target (0.397 / 0.103) because almost everyone reaches the end of their 10
+  profiles.

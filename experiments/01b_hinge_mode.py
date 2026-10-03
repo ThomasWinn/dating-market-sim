@@ -17,7 +17,7 @@ from sim.config import hinge_stages
 from sim.plots import INK_2, SIDE_COLORS, figure, finish, series_lines
 from sim.runner import run_grid
 
-RESULTS = Path(__file__).resolve().parent.parent / "results"
+ROOT = Path(__file__).resolve().parent.parent / "results"
 STAGE_LABELS = ["Classroom", "+ Scrolling", "+ Newest-first", "+ Carry-over"]
 
 
@@ -26,7 +26,7 @@ def stage_axis(ax, title: str) -> None:
     ax.set_title(title, color=INK_2)
 
 
-def charts(df: pd.DataFrame, n: int, seeds: int, days: int) -> None:
+def charts(df: pd.DataFrame, n: int, seeds: int, days: int, out: Path) -> None:
     sub = (
         f"Each step adds one mechanic · {n:,} per side · {days} days · "
         f"mean of {seeds} seeds, band = min–max"
@@ -45,9 +45,7 @@ def charts(df: pd.DataFrame, n: int, seeds: int, days: int) -> None:
         series_lines(ax, df, "stage_i", col)
         stage_axis(ax, title)
     axes[0].yaxis.set_major_formatter(lambda v, _: f"{v:,.0f}")
-    finish(
-        fig, RESULTS / "01b_outcomes_by_stage.png", "What each Hinge mechanic does to outcomes", sub
-    )
+    finish(fig, out / "01b_outcomes_by_stage.png", "What each Hinge mechanic does to outcomes", sub)
 
     # The emergent split between the sides, shown for the random ranker so it's about
     # the people, not the ranking.
@@ -76,7 +74,7 @@ def charts(df: pd.DataFrame, n: int, seeds: int, days: int) -> None:
         stage_axis(ax, title)
     finish(
         fig,
-        RESULTS / "01b_sides_by_stage.png",
+        out / "01b_sides_by_stage.png",
         "Same app, different behavior: the like-happy side hits the cap, the picky side "
         "runs out of patience",
         sub + " · random ranker",
@@ -94,10 +92,11 @@ def main() -> None:
     stages = hinge_stages(args.n)
     jobs = [({"stage": name, "stage_i": i}, cfg) for i, (name, cfg) in enumerate(stages.items())]
     df = run_grid(jobs, range(args.seeds), workers=args.workers)
-    RESULTS.mkdir(exist_ok=True)
-    df.to_csv(RESULTS / "01b_hinge_stages.csv", index=False)
+    out = ROOT / f"n{args.n}"
+    out.mkdir(parents=True, exist_ok=True)
+    df.to_csv(out / "01b_hinge_stages.csv", index=False)
     days = next(iter(stages.values())).days
-    charts(df, args.n, args.seeds, days)
+    charts(df, args.n, args.seeds, days, out)
 
     cols = [
         "matches",
@@ -110,7 +109,7 @@ def main() -> None:
     ]
     table = df.groupby(["stage_i", "stage", "ranker"])[cols].mean().round(3)
     print(table.to_string())
-    print(f"{len(df)} runs, {time.perf_counter() - start:.0f}s -> results/01b_*.png")
+    print(f"{len(df)} runs, {time.perf_counter() - start:.0f}s -> results/n{args.n}/01b_*.png")
 
 
 if __name__ == "__main__":
