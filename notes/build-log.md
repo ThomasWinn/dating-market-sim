@@ -536,3 +536,15 @@ and stability optimizes something else." That's a good example of checking wheth
 algorithm's guarantee is the thing the business needs.
 
 **Look at:** `gale_shapley()` in `rankers/gale_shapley.py`, then `results/n500/01d_top_pick.png`.
+
+---
+
+## Step 10: README
+
+**What:** the README now has a Phase 1 section with what the sim is, how to run it, five
+charts from the 2,000/side runs, three findings drawn from the measured numbers, and
+limitations. The three items Phase 1 covers are ticked in "Things I want to try", and the
+status line points to this log.
+
+**The findings are my draft.** Rewrite them in your own words. Explaining these three
+results out loud, with the numbers, is the interview-ready part of Phase 1.
