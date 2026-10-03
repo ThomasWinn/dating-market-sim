@@ -366,3 +366,70 @@ fixed.
 
 **Look at:** `results/01_classroom_oracles.png` first. It's the one-picture argument for
 reciprocal recommendation.
+
+---
+
+## Step 7: Hinge mode, one mechanic at a time (`experiments/01b_hinge_mode.py`)
+
+**What:**
+- `tests/test_hinge.py`: one test per mechanic, plus the emergent-behaviour tests.
+- A new metric, `cap_hit_share`: the share of browse days that ended at the like cap.
+- `experiments/01b_hinge_mode.py`: 5 rankers × 4 cumulative stages × 3 seeds, in 1 second.
+
+The code paths themselves landed in step 4, because each one is a single branch.
+`inbox_order` picks the review sort key, and `carry_over` decides whether `end_of_day` drops
+unreviewed likes. Scrolling is only numbers (`list_len = 50`, `quit_prob = 0.05`). This step
+tests each mechanic in isolation and measures it.
+
+**Tests that pin each mechanic down:**
+- **best-first:** with 40 likes waiting, the reviewer handles exactly their top-`attention` by
+  their own Q.
+- **newest-first:** with 10 likes from each of days 0–3, day 3's go first.
+- **carry-over:** unreviewed likes stay pending (or vanish without it), and in a full run some
+  likes are reviewed more than a day late.
+- **emergent behaviour:** side A's cap-hit share is more than 5× side B's, and side B views
+  more profiles but sends less than half as many likes.
+
+**Exposure, again:** the scrolling stage put side B at 30.4% (inbox reviews again). I lowered
+the Hinge browse target from 0.30 to 0.27, which gives **6 days at 500 and 27 at 2,000**. A
+test now checks every stage stays ≤ 30%.
+
+### Results (500/side, 6 days, mean of 3 seeds)
+| stage | random | popularity | elo | one-sided | reciprocal |
+|---|---|---|---|---|---|
+| classroom | 1,743 | 1,160 | 1,470 | 3,677 | 5,479 |
+| + scrolling | 2,505 | 2,155 | 2,187 | 3,750 | 5,590 |
+| + newest-first | 2,420 | 1,461 | 2,160 | 3,058 | 5,028 |
+| + carry-over | 2,486 | 1,504 | 2,164 | 2,871 | **4,410** |
+
+**1. Scrolling: your predicted emergent effect shows up, and nobody coded it.**
+Random ranker:
+
+| | profiles viewed/day | likes sent/day | days ending at the cap |
+|---|---|---|---|
+| A | 13.1 | 4.6 | **35%** |
+| B | **18.1** | 1.8 | 3.8% |
+
+Side A burns through its 8 likes. Side B scrolls further and quits from boredom. The like cap
+is a real constraint for one side only. Product lesson: a "more likes" subscription is worth
+far more to side A.
+
+**2. Newest-first only hurts the rankers that congest inboxes.** Reciprocal: −10%, one-sided:
+−18%, popularity: −32%, random and Elo: about flat. Without carry-over every waiting like
+arrived the same day, so "newest-first" is really *random order*. Losing best-first only
+matters when there are more likes than attention.
+
+**3. Carry-over *lowers* matches for the reciprocal oracle (5,028 → 4,410), even though it
+keeps likes alive. I measured why.** The count of mutual-but-never-matched pairs (both would
+like each other, a like was sent, no match) rose from 1,517 to 2,145 (+628), which lines up
+with the 560 lost matches. Here's the mechanism:
+- Without carry-over, an unread like dies, and the pair can still meet later in browse.
+- With carry-over, the like sits in a flooded inbox forever. Newest-first buries it, and
+  because people waiting in your inbox are excluded from your feed, that pair can never meet
+  another way.
+
+**A stale like in a flooded inbox is worse than no like.** Under random ranking, inboxes
+don't flood and carry-over slightly helps (119 → 88 missed pairs). This is a congestion
+effect, and exactly the kind MODE reasons about.
+
+**Look at:** `results/01b_sides_by_stage.png`, then `results/01b_outcomes_by_stage.png`.

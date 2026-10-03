@@ -37,6 +37,11 @@ LABELS = {
     "gale_shapley": "Gale-Shapley",
 }
 
+# Sides are a different kind of entity from rankers, so they get their own pair
+# (slots 7-8; validated: CVD dE 22.7, contrast >= 3:1).
+SIDE_COLORS = {"a": "#4a3aa7", "b": "#e34948"}
+LABELS |= {"a": "Side A (likes often)", "b": "Side B (picky)"}
+
 plt.rcParams.update(
     {
         "figure.facecolor": SURFACE,
@@ -67,12 +72,14 @@ plt.rcParams.update(
 )
 
 
-def series_lines(ax, df: pd.DataFrame, x: str, y: str, series: str = "ranker") -> None:
+def series_lines(
+    ax, df: pd.DataFrame, x: str, y: str, series: str = "ranker", colors: dict = RANKER_COLORS
+) -> None:
     """One 2px line per series (mean over seeds) with a faint min-max band."""
-    order = [s for s in RANKER_COLORS if s in set(df[series])]
+    order = [s for s in colors if s in set(df[series])]
     for name in order:
         g = df[df[series] == name].groupby(x)[y].agg(["mean", "min", "max"]).sort_index()
-        color = RANKER_COLORS[name]
+        color = colors[name]
         ax.fill_between(g.index, g["min"], g["max"], color=color, alpha=0.12, linewidth=0)
         ax.plot(
             g.index,

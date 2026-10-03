@@ -72,7 +72,7 @@ class Config:
 # whole run. Days are derived from these so results stay comparable across market sizes.
 # Inbox reviews add more on top (about 7 points for side B), so the classroom target leaves room.
 CLASSROOM_EXPOSURE = 0.22
-HINGE_EXPOSURE = 0.30
+HINGE_EXPOSURE = 0.27  # leaves room for inbox reviews, as above
 HINGE_VIEWS_PER_DAY = 20  # ~1 / quit_prob
 HINGE_LIST_LEN = 50
 HINGE_QUIT_PROB = 0.05

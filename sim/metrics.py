@@ -46,6 +46,11 @@ def summarize(world, res) -> dict[str, float]:
             browse["shown"][(browse["side"] == 1 - i) & browse["liked"]], minlength=n
         )
         to_me = inbox["side"] == i
+        # A browse session is one person's day; did it end because they used every like?
+        session = browse["day"][mine] * n + browse["viewer"][mine]
+        likes_per_session = np.bincount(session, weights=browse["liked"][mine])
+        active = np.bincount(session) > 0
+        cap_hit = likes_per_session[active] >= world.cfg.like_cap
         out |= {
             f"{s}_gini_matches": gini(matches[s]),
             f"{s}_zero_match_pct": 100 * float(np.mean(matches[s] == 0)),
@@ -55,6 +60,7 @@ def summarize(world, res) -> dict[str, float]:
             f"{s}_views_per_user_day": views / (n * res.days),
             f"{s}_dead_like_share": float(dead[to_me].mean()) if to_me.any() else 0.0,
             f"{s}_exposure": float(res.exposure[s].mean()),
+            f"{s}_cap_hit_share": float(cap_hit.mean()) if len(cap_hit) else 0.0,
         }
         for d, v in enumerate(by_decile(matches[s], people.u)):
             out[f"{s}_u_decile_{d}"] = float(v)
