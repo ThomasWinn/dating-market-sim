@@ -1,5 +1,37 @@
 """True preferences: P[a, b] = chance A likes B, Q[b, a] = chance B likes A.
 
+The chain for viewer A looking at target B (Q is the same with the sides swapped):
+
+    taste(A→B) = Σ_{k ∈ ideal-point}    imp_A,k · (1 − |ideal_A,k − trait_B,k|)   my type
+               + Σ_{k ∈ more-is-better} imp_A,k · trait_B,k                     fitter
+
+    score(A→B) = w_A · z(u)_B  +  (1 − w_A) · z_row(taste)_A,B  +  chem(A, B)
+
+        z(u)      u standardized over all targets (mean 0, SD 1)
+        z_row     taste standardized within A's row, so every viewer's fit has SD 1
+        chem      Normal(0, σ_c²), one draw per pair, shared: chem(B, A) = chem(A, B)
+
+    P[A, B]    = sigmoid((score(A→B) − θ_A) / T),      sigmoid(x) = 1 / (1 + e^−x)
+    θ_A        = the value with  mean over B of P[A, B] = like_rate_A   (bisection, per row)
+    D_A[A, B]  = 1 if U(0, 1) < P[A, B]                the decision itself, drawn once
+
+Symbols -> config: T = temp, σ_c = chemistry_sd. w, imp, ideal, u, like_rate come from
+population.py.
+
+How the knobs interact (measured at 500/side unless noted):
+- w: share of weight on universal appeal. Raising side A's average from 0.1 to 0.9 raises the
+  Gini of expected likes received (A→B) from 0.27 to 0.42, and likes start tracking u
+  (corr 0.38 -> 0.97). Both parts are z-scored first, so w = 0.6 really means 60% appeal.
+- imp on more-is-better traits: everyone ranks fitness and ambition the same way, so they act
+  like a second u inside "type". At the plan's weights they were 78% of taste variance and w
+  barely changed concentration; at the current weights they're about 18%.
+- T: how sharp a decision is. As T → 0, P becomes a hard 0/1 cutoff at θ. A large T blurs
+  decisions toward a coin flip near θ. T is also why a plain quantile θ overshoots: at
+  T = 0.3, side B's 10.3% target came out at 14.5% before calibration.
+- like_rate only moves the bar θ. It never changes who ranks above whom for a viewer.
+- σ_c: one-off clicks no trait predicts. Because it's shared, mutual interest is a little
+  more likely than independent draws would give.
+
 Everything is computed once per world, fully vectorized. Loops run over the 5 traits or over
 bisection steps, never over pairs.
 """

@@ -17,14 +17,16 @@ FITNESS = 3
 
 @dataclass(frozen=True)
 class SideConfig:
-    w_mean: float  # average looks-vs-type weight
-    like_rate_beta: tuple[float, float]  # Beta(a, b) for pickiness, before the u shift
-    importance: tuple[float, float, float, float, float]  # average weight per trait (TRAITS order)
-    w_spread: float = 0.15  # each person's w is the side mean ± up to this much
-    attention: tuple[int, int] = (5, 15)  # incoming likes reviewed per day, inclusive range
+    # Formulas using these are in population.py and preferences.py.
+    w_mean: float  # w̄: average weight on appeal u. Higher = everyone wants the same people
+    like_rate_beta: tuple[float, float]  # (a, b): mean like-rate a / (a + b), before the u shift
+    importance: tuple[float, float, float, float, float]  # avg weight per trait (TRAITS order).
+    # Big weights on fitness / ambition act like a second universal score (see note below).
+    w_spread: float = 0.15  # s: each person's w is w̄ ± up to s
+    attention: tuple[int, int] = (5, 15)  # likes read per day. Lower = more likes die unread
 
 
-# Side A likes more often and weights looks more; side B is pickier and weights ambition more.
+# Side A (men) likes more often and weights looks more; side B (women) is pickier and weights ambition more.
 #
 # The plan's importances were (1, 1, 1, 2, 1) for A and (1, 1, 1, 1.8, 1.3) for B. Those made
 # 78% of each person's taste variance come from fitness and ambition, which everyone ranks the
@@ -42,30 +44,31 @@ class Config:
     side_a: SideConfig = SIDE_A
     side_b: SideConfig = SIDE_B
 
-    # Population
-    ideal_self_similarity: float = 0.5  # rho in: ideal = rho * own + (1 - rho) * random
-    importance_jitter: float = 0.3  # each person's importance is the side average ± 30%
-    fitness_u_corr: float = 0.4  # fitness partly reveals hidden general appeal
-    like_rate_u_shift: float = -0.05  # per SD of u: attractive people are pickier
+    # Population (formulas in population.py)
+    ideal_self_similarity: float = 0.5  # ρ: ideal = ρ·own + (1 − ρ)·random. Higher = "like me"
+    importance_jitter: float = 0.3  # each person's importance is the side average × U(0.7, 1.3)
+    fitness_u_corr: float = 0.4  # c: higher = fitness reveals more of hidden appeal u
+    like_rate_u_shift: float = -0.05  # δ per SD of u. More negative = attractive people pickier
     like_rate_clip: tuple[float, float] = (0.02, 0.9)
 
-    # True preferences
-    temp: float = 0.3  # sigmoid softness, in standardized score units
-    chemistry_sd: float = 0.2  # one-off pair chemistry, shared by both directions
+    # True preferences (formulas in preferences.py)
+    temp: float = 0.3  # T: lower = sharper yes/no, higher = closer to a coin flip near the bar
+    chemistry_sd: float = 0.2  # σ_c: higher = more one-off clicks that no trait predicts
 
     # Browsing. Classroom mode: look at all 10. Hinge mode: scroll up to 50, may quit early.
     list_len: int = 10
-    quit_prob: float = 0.0  # chance of quitting after each profile viewed
-    like_cap: int = 8  # likes per day; liking back from the inbox is free
+    quit_prob: float = 0.0  # q: chance of quitting after each profile. Avg views ≈ 1/q
+    like_cap: int = 8  # likes per day; liking back is free. Binds side A on 35% of Hinge days
 
     # Inbox
-    inbox_order: Literal["best", "newest"] = "best"
-    carry_over: bool = False  # keep unreviewed likes forever instead of dropping them each night
+    inbox_order: Literal["best", "newest"] = "best"  # "newest" cost reciprocal 10% of matches
+    carry_over: bool = False  # keep unread likes forever. Cost reciprocal another 12%, because a
+    # stale like also hides that pair from each other's feeds
 
     # Rankers
-    explore_frac: float = 0.1  # share of popularity / Elo slots filled at random
+    explore_frac: float = 0.1  # share of popularity / Elo slots filled at random (every 10th)
     elo_start: float = 1500.0
-    elo_k: float = 32.0
+    elo_k: float = 32.0  # K: most a rating can move per swipe. Higher = faster but noisier
 
 
 # Exposure targets: the share of the other side an average user sees while browsing over a

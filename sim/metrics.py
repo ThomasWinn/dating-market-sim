@@ -4,7 +4,12 @@ import numpy as np
 
 
 def gini(x: np.ndarray) -> float:
-    """0 = everyone has the same amount; (n - 1) / n = one person has everything."""
+    """Gini = Σ_i (2i − n − 1) · x_(i) / (n · Σ x), with x sorted ascending and i = 1..n.
+
+    Equivalently: the mean |x_i − x_j| over all ordered pairs, divided by 2 · mean(x).
+    0 = everyone has the same amount; (n - 1) / n = one person has everything.
+    Worked example (tested): [1, 2, 3] has mean pair gap 8/9 and mean 2, so Gini = 2/9.
+    """
     x = np.sort(np.asarray(x, dtype=float))
     n = len(x)
     if x.sum() == 0:
@@ -19,7 +24,20 @@ def by_decile(values: np.ndarray, key: np.ndarray) -> np.ndarray:
 
 
 def summarize(world, res) -> dict[str, float]:
-    """One row of metrics for a finished run. Side-prefixed keys are per side (a_, b_)."""
+    """One row of metrics for a finished run. Side-prefixed keys are per side (a_, b_).
+
+    matches              matched pairs
+    gini_matches         gini(matches per user), both sides pooled
+    zero_match_pct       100 · share of users with no match
+    dead_like_share      likes never read (where the pair never matched) / likes sent
+    s_gini_likes_received  gini(browse likes each person on side s received)
+    s_like_rate          likes / profiles viewed while browsing. Per view, so people who
+                         view more count more: heavy likers hit the cap and stop, which
+                         pulls side A's rate below target in Hinge mode
+    s_cap_hit_share      browse days that ended at the like cap / browse days
+    s_exposure           mean over users of (people on the other side seen) / n
+    s_u_decile_d         mean matches for the d-th tenth of side s by hidden appeal u
+    """
     n = world.cfg.n_per_side
     m = res.matched
     browse, inbox = res.browse, res.inbox

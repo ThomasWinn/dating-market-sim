@@ -1,4 +1,33 @@
-"""Generate one side of the market: displayed traits plus the hidden variables behind them."""
+"""Generate one side of the market: displayed traits plus the hidden variables behind them.
+
+For each person i on a side (every draw independent across people):
+
+    u_i          ~ Normal(0, 1)                                  general appeal (hidden)
+    w_i          = clip(w̄ + s · U(-1, 1), 0, 1)                  looks-vs-type weight (hidden)
+    trait_i,k    ~ U(0, 1)                                       intent, travel, religiosity,
+                                                                 ambition (displayed)
+    fitness_i    = rank(c · u_i + √(1 − c²) · ε_i) / n           ε ~ N(0, 1) (displayed)
+    ideal_i,k    = ρ · trait_i,k + (1 − ρ) · U(0, 1)             ideal-point traits (hidden)
+    imp_i,k      = imp̄_k · U(1 − j, 1 + j)                       care about trait k (hidden)
+    like_rate_i  = clip(Beta(a, b) + δ · u_i, lo, hi)            pickiness (hidden)
+    attention_i  ~ integer in [lo, hi]                           likes reviewed/day (hidden)
+
+Symbols -> config: w̄ = SideConfig.w_mean, s = w_spread, c = fitness_u_corr,
+ρ = ideal_self_similarity, imp̄ = SideConfig.importance, j = importance_jitter,
+(a, b) = like_rate_beta, δ = like_rate_u_shift, (lo, hi) = like_rate_clip / attention.
+
+How the pieces interact:
+- c: the latent c·u + √(1 − c²)·ε has corr exactly c with u, and ranking it keeps the order
+  while making fitness uniform like the other traits. Measured corr(u, fitness) = 0.40.
+  A displayed trait that leaks hidden appeal is what lets a model learn u from profiles.
+- (a, b), δ: E[like_rate] = a / (a + b) = 0.40 on side A, 0.10 on side B. The δ·u shift
+  averages out but ties pickiness to appeal: corr(u, like_rate) = −0.24 on A and −0.70 on B,
+  because B's Beta is so narrow (SD ≈ 0.047) that the shift dominates its spread.
+- ρ: Var(ideal) = (ρ² + (1 − ρ)²) / 12, which is smallest at ρ = 0.5. Ideals then bunch
+  toward the middle, so the ideal-point traits barely separate one candidate from another (see
+  `taste` in preferences.py). Higher ρ also means "I want someone like me".
+- s: the U(-1, 1) offset is drawn once per person, so sweeping w̄ shifts the same people.
+"""
 
 from dataclasses import dataclass
 

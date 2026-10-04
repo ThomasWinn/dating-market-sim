@@ -1,5 +1,20 @@
 """Elo, the way Tinder reportedly used it: each swipe is a "game" the person being swiped on
-wins (a like) or loses (a pass), against the swiper's rating."""
+wins (a like) or loses (a pass), against the swiper's rating.
+
+For one swipe by s (rating R_s) on target t (rating R_t):
+
+    E_t  = 1 / (1 + 10^((R_s − R_t) / 400))      t's expected chance of being liked
+    R_t += K · (S − E_t)                         S = 1 if liked, 0 if passed; R_s unchanged
+
+- A 400-point gap is 10:1 odds. Equal ratings give E_t = 0.5, so a like is +K/2.
+- Surprises move ratings most. Example (tested): R_s = 1600, R_t = 1400 gives E_t = 0.24, so a
+  like is +24.3 and a pass is −7.7.
+- K = elo_k (32) caps how far one swipe can move a rating: bigger K learns faster but is noisier.
+- A day's swipes all use the morning ratings and add up: ΔR_t = K · Σ (S − E_t).
+
+Ranking: score(viewer, candidate) = −|pct_viewer − pct_candidate|, where pct is a rating's
+percentile within its own side (raw ratings drift apart because side B is pickier).
+"""
 
 import numpy as np
 

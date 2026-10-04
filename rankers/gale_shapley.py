@@ -5,6 +5,13 @@ rejects the rest; rejected proposers move to their next choice. It ends when nob
 anyone left to propose to. The result is *stable*: no two people would both rather be with
 each other than with who they got. It also favors the proposing side: each proposer gets the
 best partner they could have in any stable matching.
+
+Stable, as a formula: there is no allowed pair (a, b) with
+
+    P[a, b] > P[a, partner(a)]   and   Q[b, a] > Q[b, partner(b)]
+
+(an unmatched person counts as preferring anyone allowed). Stability only uses the *order* of
+P and Q, never their size, which is why it can pair people with a low match chance P · Q.
 """
 
 import numpy as np

@@ -8,6 +8,27 @@
 3. End of day: unreviewed likes vanish (classroom) or carry over (Hinge mode).
 
 A final review-only round after the last day processes the last day's likes.
+
+The rules behind each step, for person i:
+
+    Review    i reads their top attention_i pending likes, ordered by priority:
+                best-first:    their own P (or Q) for the sender, highest first
+                newest-first:  day sent, latest first
+              like back  <=>  D[i, sender] = 1, and a like-back is a match
+    Browse    profiles viewed = min(cap_stop, patience, list length)
+                cap_stop  = position of i's like_cap-th like, if they reach it
+                patience ~ Geometric(q), so E[min(patience, L)] = (1 − (1 − q)^L) / q
+                           which is 18.5 for q = 0.05, L = 50 (side B measured 18.1 a day)
+    Eligible  not seen before, and not waiting in i's inbox. With carry-over this means a
+              stale unread like also blocks the pair from meeting in browse.
+
+Why rankers differ: a pair matches exactly when D_A[a, b] = D_B[b, a] = 1, which happens with
+probability P[a, b] · Q[b, a]. So
+
+    E[matches] = Σ over distinct pairs shown of P[a, b] · Q[b, a],  if every like gets read
+
+Unread likes make it smaller. Showing the same pair to both sides adds nothing (decisions are
+drawn once), which is why Elo and Gale-Shapley lose to rankers that cover more distinct pairs.
 """
 
 from dataclasses import dataclass
